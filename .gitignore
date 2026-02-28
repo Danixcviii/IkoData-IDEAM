@@ -1,0 +1,8 @@
+.vscode
+staging-zone
+*.tsv
+*.nc
+*.cpt
+*.lock
+*.csv
+venv
