@@ -2,6 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Tuple
 
+import xarray as xr
+import os
+import re # librería de expresiones regulares
+
 def obtener_enlaces_ersst(
     ano_inicio: int, mes_inicio: int,
     ano_fin: int, mes_fin: int,
@@ -71,3 +75,57 @@ def obtener_enlaces_ersst(
 # for url in enlaces[:5]:
 #     print(url)
 # print(f"Total de archivos encontrados: {len(enlaces)}")
+
+
+def netcdf2cpt(path: str) -> str:
+
+    # Leer archivo netCDF guardado en path
+    try:
+        ds = xr.open_dataset(path)
+    except Exception as e:
+        return f"Error al abrir el archivo: {e}"
+
+    # Leer variable sst y recortar dimensiones Lat. y Lon.
+    ds_subset = ds.sel(lat=slice(-30, 30), lon=slice(180, 340))
+    sst_data = ds_subset['sst'].squeeze()
+    
+    latitudes = ds_subset['lat'].values
+    longitudes = ds_subset['lon'].values
+    
+    # Extraer la fecha del nombre del archivo
+    nombre_archivo = os.path.basename(path)
+    
+    # Patrón de 4 dígitos (año) seguidos de 2 dígitos (mes)
+    match = re.search(r'(\d{4})(\d{2})', nombre_archivo)
+    
+    if match:
+        year = match.group(1) # Los primeros 4 dígitos
+        month = match.group(2) # Los siguientes 2 dígitos
+        year_month = f"{year}-{month}"
+    else:
+        # Si por alguna razón el archivo no tiene números, se pone un valor por defecto
+        year_month = "YYYY-MM" 
+
+    #Convertir en formato .tsv (CPT)
+    output_filename = path.replace('.nc', '_cpt.tsv')
+    
+    with open(output_filename, 'w') as f:
+        # Encabezado estándar de CPT usando fecha del nombre
+        f.write("xmlns:cpt=http://iri.columbia.edu/CPT/v10/\n")
+        f.write("cpt:nfields=1\n")
+        f.write(f"cpt:field=sst, cpt:T={year_month}, cpt:nrow={len(latitudes)}, cpt:ncol={len(longitudes)}, cpt:row=Y, cpt:col=X, cpt:units=Celsius, cpt:missing=-999.0\n")
+        
+        # Escribir la fila de longitudes
+        lon_str = "\t" + "\t".join([f"{lon:.2f}" for lon in longitudes])
+        f.write(lon_str + "\n")
+        
+        # Escribir cada fila de latitudes
+        for i, lat in enumerate(latitudes):
+            row_values = sst_data[i, :].fillna(-999.0).values
+            row_str = f"{lat:.2f}\t" + "\t".join([f"{val:.3f}" for val in row_values])
+            f.write(row_str + "\n")
+
+    # Cerrar dataset
+    ds.close()
+
+    return output_filename
