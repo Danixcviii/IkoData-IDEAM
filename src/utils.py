@@ -136,7 +136,7 @@ def download_file(url: str):
     return "path.nc"
 
 def parallel_function(url: str):
-    path=""
+    path=download_file(url)
     netcdf2cpt(path)
 
 def integrate_file(paths: list[str]):
