@@ -131,9 +131,14 @@ def netcdf2cpt(path: str) -> str:
     return output_filename
 
 def download_file(url: str):
-    #TODO: generar descarga del archivo en url y guardar en ./data
-    #TODO: retornar ruta del archivo descargado ej: ./data/sst2026-01.nc
-    return "path.nc"
+    import requests
+    response = requests.get(url)
+    *_, filename = url.split('/')
+    path = f"data/{filename}"
+    with open(path, "xb") as f:
+        f.write(response.content)
+    return path
+    
 
 def parallel_function(url: str):
     path=download_file(url)

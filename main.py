@@ -6,7 +6,7 @@ from src.utils import get_list_of_urls, parallel_function, integrate_file
 
 if __name__ == '__main__':
 
-    url_list: list = get_list_of_urls(2024, 1, 2026, 2)
+    url_list: list = get_list_of_urls(2026, 1, 2026, 2)
 
     with ProcessPoolExecutor() as executor:
         futures = [executor.submit(parallel_function, url) for url in url_list]
