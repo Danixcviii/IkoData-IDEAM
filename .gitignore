@@ -6,3 +6,4 @@ staging-zone
 *.lock
 *.csv
 venv
+*/__pycache__/*
