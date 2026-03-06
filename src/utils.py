@@ -111,8 +111,8 @@ def netcdf2cpt(path: str) -> str:
     
     with open(output_filename, 'w') as f:
         # Encabezado estándar de CPT usando fecha del nombre
-        f.write("xmlns:cpt=http://iri.columbia.edu/CPT/v10/\n")
-        f.write("cpt:nfields=1\n")
+        # f.write("xmlns:cpt=http://iri.columbia.edu/CPT/v10/\n")
+        # f.write("cpt:nfields=1\n")
         f.write(f"cpt:field=sst, cpt:T={year_month}, cpt:nrow={len(latitudes)}, cpt:ncol={len(longitudes)}, cpt:row=Y, cpt:col=X, cpt:units=Celsius, cpt:missing=-999.0\n")
         
         # Escribir la fila de longitudes
