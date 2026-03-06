@@ -6,7 +6,7 @@ import xarray as xr
 import os
 import re # librería de expresiones regulares
 
-def obtener_enlaces_ersst(
+def get_list_of_urls(
     ano_inicio: int, mes_inicio: int,
     ano_fin: int, mes_fin: int,
     url_base: str = "https://www.ncei.noaa.gov/pub/data/cmb/ersst/v5/netcdf/"
@@ -129,3 +129,17 @@ def netcdf2cpt(path: str) -> str:
     ds.close()
 
     return output_filename
+
+def download_file(url: str):
+    #TODO: generar descarga del archivo en url y guardar en ./data
+    #TODO: retornar ruta del archivo descargado ej: ./data/sst2026-01.nc
+    return "path.nc"
+
+def parallel_function(url: str):
+    path=""
+    netcdf2cpt(path)
+
+def integrate_file(paths: list[str]):
+    #TODO: integrar todos los archivos .tsv generados en un solo archivo .tsv según lo solicitado por CPT
+    #TODO: retornar ubicación del archivo consolidado
+    return "file-CPT.tsv"
