@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from typing import List, Tuple
+from tqdm import tqdm
 
 import xarray as xr
 import os
@@ -142,9 +143,14 @@ def download_file(url: str):
 
 def parallel_function(url: str):
     path=download_file(url)
-    netcdf2cpt(path)
+    output_filename = netcdf2cpt(path)
+    return output_filename
 
 def integrate_file(paths: list[str]):
-    #TODO: integrar todos los archivos .tsv generados en un solo archivo .tsv según lo solicitado por CPT
-    #TODO: retornar ubicación del archivo consolidado
-    return "file-CPT.tsv"
+    buffer = []
+    for path in tqdm(paths, total=len(paths)):
+        with open(path) as f:
+            buffer += f.readlines()
+    with open('data/file-CPT.tsv', 'x') as f:
+        f.writelines(buffer)
+    return "data/file-CPT.tsv"

@@ -15,6 +15,5 @@ if __name__ == '__main__':
 
         for future in tqdm(as_completed(futures), total=len(futures)):
             results.append(future.result())
-
     
     integrate_file(results)
