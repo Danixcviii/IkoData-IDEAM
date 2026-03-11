@@ -1,6 +1,5 @@
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
-import time
 from src.utils import get_list_of_urls, parallel_function, integrate_file
 
 
