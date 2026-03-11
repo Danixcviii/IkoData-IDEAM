@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Tuple
 from tqdm import tqdm
-
+import requests
 import xarray as xr
 import os
 import re # librería de expresiones regulares
@@ -132,14 +132,18 @@ def netcdf2cpt(path: str) -> str:
     return output_filename
 
 def download_file(url: str):
-    import requests
-    response = requests.get(url)
+    stagin_zone = 'data'
+    os.makedirs(stagin_zone, exist_ok=True)
     *_, filename = url.split('/')
-    path = f"data/{filename}"
-    with open(path, "xb") as f:
-        f.write(response.content)
-    return path
+    path = os.path.join(stagin_zone, filename)
+    if not os.path.exists(path):
+        response = requests.get(url)
+        response.raise_for_status()
+
+        with open(path, "xb") as f:
+            f.write(response.content)
     
+    return path
 
 def parallel_function(url: str):
     path=download_file(url)
@@ -147,6 +151,7 @@ def parallel_function(url: str):
     return output_filename
 
 def integrate_file(paths: list[str]):
+    
     buffer = []
     for path in tqdm(paths, total=len(paths)):
         with open(path) as f:
