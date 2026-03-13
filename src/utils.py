@@ -134,7 +134,7 @@ def netcdf2cpt(path: str) -> str:
 def download_file(url: str):
     stagin_zone = 'data'
     os.makedirs(stagin_zone, exist_ok=True)
-    *_, filename = url.split('/')
+    filename = os.path.basename(url)
     path = os.path.join(stagin_zone, filename)
     if not os.path.exists(path):
         response = requests.get(url)
@@ -151,11 +151,27 @@ def parallel_function(url: str):
     return output_filename
 
 def integrate_file(paths: list[str]):
+
+    def extract_date(path: str):
+        strdate = path.split('_')[0].split('.')[-1]
+        return f"{strdate[:4]}-{strdate[4:]}"
+
+    paths = sorted(paths, key=lambda x: x.split('_')[0].split('.')[-1])
+
     
+
     buffer = []
     for path in tqdm(paths, total=len(paths)):
         with open(path) as f:
             buffer += f.readlines()
     with open('data/file-CPT.tsv', 'x') as f:
+        f.write(
+        """
+        xmlns:cpt=http://iri.columbia.edu/CPT/v10/
+        xmlns:cf=http://cf-pcmdi.llnl.gov/documents/cf-conventions/1.4/
+        cpt:nfields=1\n
+        """
+        )
+        f.write(f"cpt=T {' '.join(list(map(extract_date, paths)))}\n")
         f.writelines(buffer)
     return "data/file-CPT.tsv"
