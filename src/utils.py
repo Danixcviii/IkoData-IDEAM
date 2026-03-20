@@ -81,54 +81,48 @@ def get_list_of_urls(
 def netcdf2cpt(path: str) -> str:
 
     # Leer archivo netCDF guardado en path
-    try:
-        ds = xr.open_dataset(path)
-    except Exception as e:
-        return f"Error al abrir el archivo: {e}"
+    with xr.open_dataset(path) as ds:
 
-    # Leer variable sst y recortar dimensiones Lat. y Lon.
-    ds_subset = ds.sel(lat=slice(-30, 30), lon=slice(180, 340))
-    sst_data = ds_subset['sst'].squeeze()
-    
-    latitudes = ds_subset['lat'].values
-    longitudes = ds_subset['lon'].values
-    
-    # Extraer la fecha del nombre del archivo
-    nombre_archivo = os.path.basename(path)
-    
-    # Patrón de 4 dígitos (año) seguidos de 2 dígitos (mes)
-    match = re.search(r'(\d{4})(\d{2})', nombre_archivo)
-    
-    if match:
-        year = match.group(1) # Los primeros 4 dígitos
-        month = match.group(2) # Los siguientes 2 dígitos
-        year_month = f"{year}-{month}"
-    else:
-        # Si por alguna razón el archivo no tiene números, se pone un valor por defecto
-        year_month = "YYYY-MM" 
-
-    #Convertir en formato .tsv (CPT)
-    output_filename = path.replace('.nc', '_cpt.tsv')
-    
-    with open(output_filename, 'w') as f:
-        # Encabezado estándar de CPT usando fecha del nombre
-        # f.write("xmlns:cpt=http://iri.columbia.edu/CPT/v10/\n")
-        # f.write("cpt:nfields=1\n")
-        f.write(f"cpt:field=sst, cpt:T={year_month}, cpt:nrow={len(latitudes)}, cpt:ncol={len(longitudes)}, cpt:row=Y, cpt:col=X, cpt:units=Celsius, cpt:missing=-999.0\n")
+        # Leer variable sst y recortar dimensiones Lat. y Lon.
+        ds_subset = ds.sel(lat=slice(-30, 30), lon=slice(180, 340))
+        sst_data = ds_subset['sst'].squeeze()
         
-        # Escribir la fila de longitudes
-        lon_str = "\t" + "\t".join([f"{lon:.2f}" for lon in longitudes])
-        f.write(lon_str + "\n")
+        latitudes = ds_subset['lat'].values
+        longitudes = ds_subset['lon'].values
         
-        # Escribir cada fila de latitudes
-        for i, lat in enumerate(latitudes):
-            row_values = sst_data[i, :].fillna(-999.0).values
-            row_str = f"{lat:.2f}\t" + "\t".join([f"{val:.3f}" for val in row_values])
-            f.write(row_str + "\n")
+        # Extraer la fecha del nombre del archivo
+        nombre_archivo = os.path.basename(path)
+        
+        # Patrón de 4 dígitos (año) seguidos de 2 dígitos (mes)
+        match = re.search(r'(\d{4})(\d{2})', nombre_archivo)
+        
+        if match:
+            year = match.group(1) # Los primeros 4 dígitos
+            month = match.group(2) # Los siguientes 2 dígitos
+            year_month = f"{year}-{month}"
+        else:
+            # Si por alguna razón el archivo no tiene números, se pone un valor por defecto
+            year_month = "YYYY-MM" 
 
-    # Cerrar dataset
-    ds.close()
-
+        #Convertir en formato .tsv (CPT)
+        output_filename = path.replace('.nc', '_cpt.tsv')
+        
+        with open(output_filename, 'w') as f:
+            # Encabezado estándar de CPT usando fecha del nombre
+            # f.write("xmlns:cpt=http://iri.columbia.edu/CPT/v10/\n")
+            # f.write("cpt:nfields=1\n")
+            f.write(f"cpt:field=sst, cpt:T={year_month}, cpt:nrow={len(latitudes)}, cpt:ncol={len(longitudes)}, cpt:row=Y, cpt:col=X, cpt:units=Celsius, cpt:missing=-999.0\n")
+            
+            # Escribir la fila de longitudes
+            lon_str = "\t" + "\t".join([f"{lon:.2f}" for lon in longitudes])
+            f.write(lon_str + "\n")
+            
+            # Escribir cada fila de latitudes
+            for i, lat in enumerate(latitudes):
+                row_values = sst_data[i, :].fillna(-999.0).values
+                row_str = f"{lat:.2f}\t" + "\t".join([f"{val:.3f}" for val in row_values])
+                f.write(row_str + "\n")
+                
     return output_filename
 
 def download_file(url: str):
@@ -158,13 +152,36 @@ def integrate_file(paths: list[str]):
 
     paths = sorted(paths, key=lambda x: x.split('_')[0].split('.')[-1])
 
-    
-
     buffer = []
     for path in tqdm(paths, total=len(paths)):
         with open(path) as f:
             buffer += f.readlines()
-    with open('data/file-CPT.tsv', 'x') as f:
+
+    # Esto es un apaño, que toca hacer bien, esto lo hice por el afán
+    smonths = {
+        '01': "Enero",
+        '02': "Febrero",
+        '03': "Marzo",
+        '04': "Abril",
+        '05': "Mayo",
+        '06': "Junio",
+        '07': "Julio",
+        '08': "Agosto",
+        '09': "Septiembre",
+        '10': "Octubre",
+        '11': "Noviembre",
+        '12': "Diciembre",
+    }
+    
+    _, monthno = extract_date(paths[0]).split('-')
+            
+    smonthname = smonths[monthno]
+
+
+    buffer_path = f'data/1_CPT_Mensual_{smonthname}_1854_2026.tsv'
+
+
+    with open(buffer_path, 'x') as f:
         f.write(
         """
         xmlns:cpt=http://iri.columbia.edu/CPT/v10/
@@ -174,4 +191,19 @@ def integrate_file(paths: list[str]):
         )
         f.write(f"cpt=T {' '.join(list(map(extract_date, paths)))}\n")
         f.writelines(buffer)
-    return "data/file-CPT.tsv"
+
+    return buffer_path
+
+def group_files(paths: list[str]):
+    from collections import defaultdict
+
+    def extract_month(path: str):
+        strdate = path.split('_')[0].split('.')[-1]
+        return strdate[4:]
+    
+    buffer = defaultdict(lambda:[])
+
+    for pathfile in paths:
+        buffer[extract_month(pathfile)].append(pathfile)
+    
+    return buffer
